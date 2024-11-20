@@ -1,0 +1,67 @@
+services:
+
+  postgresql_db:
+    image: "postgres:17.1"
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=ausonia_user
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=ausonia
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "ausonia", "-d", "ausonia"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+    networks:
+      - ausonia_network
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/ausonia_bot
+    environment:
+      - SYNC_API_URL=api:8000
+      - ASYNC_API_URL=http://api:8000
+      - POSTGRES_URL=postgresql_db
+      - DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      postgresql_db:
+        condition: service_healthy
+    networks:
+      - ausonia_network
+    command: python bot.py
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    volumes:
+      - ./api:/ausonia_api
+    environment:
+      - AUTH_TOKEN=${AUTH_TOKEN}
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8000/"]
+      interval: 1m30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
+    networks:
+      - ausonia_network
+    command: fastapi run server.py
+
+networks:
+  ausonia_network:
+    driver: bridge

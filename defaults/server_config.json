@@ -1,0 +1,8 @@
+{
+  "WELCOME_MESSAGE": {
+    "ENABLED": true,
+    "MESSAGE": "%MENTION%, welcome to the server!"
+  },
+  "MODERATOR_ROLE_ID": "1",
+  "DIFFUSION_ROLE_ID": "1"
+}
